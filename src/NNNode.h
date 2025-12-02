@@ -10,11 +10,10 @@ class NNNode : public Node2D {
     GDCLASS(NNNode, Node2D)
 
     private:
-        std::vector<int> layer_sizes; // [0] = output, [last] = input
-        std::vector<std::vector<std::vector<double>>> weights; // weights[i][neuron][weight]
-        std::vector<std::vector<double>> biases; // biases[i][neuron]
-        std::vector<std::vector<double>> activations; // activations[i][neuron]
-        std::vector<std::vector<bool>> computed; // Track if neuron is computed
+        std::vector<int> layer_sizes;
+        std::vector<std::vector<std::vector<double>>> weights; // [layer][neuron][weight]
+        std::vector<std::vector<double>> biases; // [layer][neuron]
+        std::vector<std::vector<double>> activations; // [layer][neuron]
         std::vector<double> input_values;
         std::vector<double> output_values;
         bool network_initialized;
@@ -22,9 +21,6 @@ class NNNode : public Node2D {
         // Neural network functions
         double sigmoid(double x);
         void initialize_network();
-        
-        // Recursive neuron-level forward propagation
-        double compute_neuron_recursive(int layer, int neuron);
         void forward_propagation();
 
     protected:

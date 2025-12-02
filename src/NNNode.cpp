@@ -49,96 +49,53 @@ double NNNode::sigmoid(double x) {
 
 void NNNode::initialize_network() {
     if (layer_sizes.size() < 2) {
-        UtilityFunctions::print("Error: Need at least 2 layers (output and input)");
+        UtilityFunctions::print("Error: Need at least 2 layers (input and output)");
         return;
     }
 
     weights.clear();
     biases.clear();
     activations.clear();
-    computed.clear();
 
-    // Initialize activations and computed flags for all layers
+    // Initialize activations for all layers
     activations.resize(layer_sizes.size());
-    computed.resize(layer_sizes.size());
     for (size_t i = 0; i < layer_sizes.size(); i++) {
         activations[i].resize(layer_sizes[i], 0.0);
-        computed[i].resize(layer_sizes[i], false);
     }
 
-    // Initialize biases from output to second-to-last layer (not for input layer)
-    for (int layer = 0; layer < (int)layer_sizes.size() - 1; layer++) {
-        std::vector<double> layer_biases;
-        for (int neuron = 0; neuron < layer_sizes[layer]; neuron++) {
-            double random_bias = ((double)rand() / RAND_MAX) * 2.0 - 1.0;
-            layer_biases.push_back(random_bias);
-        }
-        biases.push_back(layer_biases);
-    }
-
-    // Initialize weights from output to input: weights[layer] connects layer[layer+1] to layer[layer]
-    for (int layer = 0; layer < (int)layer_sizes.size() - 1; layer++) {
+    // Initialize weights and biases for hidden and output layers
+    // No weights for input layer
+    for (size_t layer = 1; layer < layer_sizes.size(); layer++) {
         int current_layer_size = layer_sizes[layer];
-        int next_layer_size = layer_sizes[layer + 1];
+        int previous_layer_size = layer_sizes[layer - 1];
 
+        // Initialize weights for this layer
         std::vector<std::vector<double>> layer_weights;
         for (int neuron = 0; neuron < current_layer_size; neuron++) {
             std::vector<double> neuron_weights;
-            for (int next_neuron = 0; next_neuron < next_layer_size; next_neuron++) {
+            for (int weight = 0; weight < previous_layer_size; weight++) {
+                // Random weight between -1 and 1
                 double random_weight = ((double)rand() / RAND_MAX) * 2.0 - 1.0;
                 neuron_weights.push_back(random_weight);
             }
             layer_weights.push_back(neuron_weights);
         }
         weights.push_back(layer_weights);
+
+        // Initialize biases for this layer
+        std::vector<double> layer_biases;
+        for (int neuron = 0; neuron < current_layer_size; neuron++) {
+            double random_bias = ((double)rand() / RAND_MAX) * 2.0 - 1.0;
+            layer_biases.push_back(random_bias);
+        }
+        biases.push_back(layer_biases);
     }
 
     network_initialized = true;
-    UtilityFunctions::print("Neural Network initialized (Neuron-level recursion):");
+    UtilityFunctions::print("Neural Network initialized with architecture:");
     for (size_t i = 0; i < layer_sizes.size(); i++) {
-        if (i == 0) {
-            UtilityFunctions::print("  Layer ", (int)i, " (OUTPUT): ", layer_sizes[i], " neurons");
-        } else if (i == layer_sizes.size() - 1) {
-            UtilityFunctions::print("  Layer ", (int)i, " (INPUT): ", layer_sizes[i], " neurons");
-        } else {
-            UtilityFunctions::print("  Layer ", (int)i, " (HIDDEN): ", layer_sizes[i], " neurons");
-        }
+        UtilityFunctions::print("  Layer ", (int)i, ": ", layer_sizes[i], " neurons");
     }
-}
-
-double NNNode::compute_neuron_recursive(int layer, int neuron) {
-    int input_layer_index = layer_sizes.size() - 1;
-    
-    // Base case: if at input layer, return the input value directly
-    if (layer == input_layer_index) {
-        activations[layer][neuron] = input_values[neuron];
-        computed[layer][neuron] = true;
-        return activations[layer][neuron];
-    }
-    
-    // If this neuron is already computed, return cached value
-    if (computed[layer][neuron]) {
-        return activations[layer][neuron];
-    }
-    
-    // Recursive case: compute weighted sum by recursively computing all neurons in next layer
-    double sum = biases[layer][neuron];
-    int next_layer = layer + 1;
-    
-    // For each neuron in the next layer, recursively compute its activation
-    for (int next_neuron = 0; next_neuron < layer_sizes[next_layer]; next_neuron++) {
-        // Recursive call: compute the next neuron's activation
-        double next_activation = compute_neuron_recursive(next_layer, next_neuron);
-        
-        // Add weighted contribution to current neuron's sum
-        sum += next_activation * weights[layer][neuron][next_neuron];
-    }
-    
-    // Apply sigmoid activation function
-    activations[layer][neuron] = sigmoid(sum);
-    computed[layer][neuron] = true;
-    
-    return activations[layer][neuron];
 }
 
 void NNNode::forward_propagation() {
@@ -147,20 +104,29 @@ void NNNode::forward_propagation() {
         return;
     }
 
-    // Reset computed flags for new computation
-    for (size_t i = 0; i < computed.size(); i++) {
-        for (size_t j = 0; j < computed[i].size(); j++) {
-            computed[i][j] = false;
+    // Set input layer activations
+    for (size_t i = 0; i < input_values.size() && i < activations[0].size(); i++) {
+        activations[0][i] = input_values[i];
+    }
+
+    // Propagate through each layer
+    for (size_t layer = 1; layer < layer_sizes.size(); layer++) {
+        for (int neuron = 0; neuron < layer_sizes[layer]; neuron++) {
+            double sum = biases[layer - 1][neuron];
+            
+            // Sum weighted inputs from previous layer
+            for (int prev_neuron = 0; prev_neuron < layer_sizes[layer - 1]; prev_neuron++) {
+                sum += activations[layer - 1][prev_neuron] * 
+                       weights[layer - 1][neuron][prev_neuron];
+            }
+            
+            // Apply sigmoid activation function
+            activations[layer][neuron] = sigmoid(sum);
         }
     }
 
-    // Compute each output neuron (layer 0) recursively
-    // Each output neuron will trigger recursive computation of all neurons it depends on
-    output_values.clear();
-    for (int neuron = 0; neuron < layer_sizes[0]; neuron++) {
-        double output = compute_neuron_recursive(0, neuron);
-        output_values.push_back(output);
-    }
+    // Store output layer activations
+    output_values = activations[layer_sizes.size() - 1];
 }
 
 void NNNode::set_layer_sizes(const Array& sizes) {
@@ -185,10 +151,9 @@ void NNNode::set_inputs(const Array& inputs) {
         input_values.push_back((double)inputs[i]);
     }
     
-    int input_layer_index = layer_sizes.size() - 1;
-    if (network_initialized && input_values.size() != (size_t)layer_sizes[input_layer_index]) {
+    if (network_initialized && input_values.size() != (size_t)layer_sizes[0]) {
         UtilityFunctions::print("Warning: Input size (", (int)input_values.size(), 
-                                ") doesn't match input layer size (", layer_sizes[input_layer_index], ")");
+                                ") doesn't match input layer size (", layer_sizes[0], ")");
     }
 }
 
