@@ -8,3 +8,5 @@
 /chess_godot/bin
 
 *.obj
+*.dblite
+src/NNNode.windows.template_debug.x86_64.obj

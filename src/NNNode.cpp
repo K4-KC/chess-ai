@@ -49,7 +49,7 @@ double NNNode::sigmoid(double x) {
 
 void NNNode::initialize_network() {
     if (layer_sizes.size() < 2) {
-        UtilityFunctions::print("Error: Need at least 2 layers (input and output)");
+        UtilityFunctions::print("Error: Need at least 2 layers");
         return;
     }
 
