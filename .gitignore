@@ -1,5 +1,10 @@
 # Godot 4+ specific ignores
 .godot/
 /android/
+
 /godot-cpp
-/chess_godot/bin/
+.sconsign.dblite
+
+/chess_godot/bin
+
+*.obj
