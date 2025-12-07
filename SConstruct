@@ -14,10 +14,13 @@ env = SConscript("godot-cpp/SConstruct")
 
 # tweak this if you want to use different folders, or more folders, to store your source code in.
 env.Append(CPPPATH=["src/"])
+
+# Automatically finds all .cpp files in src/ directory
 sources = Glob("src/*.cpp")
 
+# Changed library name from "NeuralNet" to "chess_ai" to reflect combined module
 library = env.SharedLibrary(
-    "chess_godot/bin/NeuralNet{}{}".format(env["suffix"], env["SHLIBSUFFIX"]),
+    "chess_godot/bin/chess_ai{}{}".format(env["suffix"], env["SHLIBSUFFIX"]),
     source=sources,
 )
 

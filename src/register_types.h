@@ -1,7 +1,11 @@
-#ifndef NeuralNet_REGISTER_TYPES_H
-#define NeuralNet_REGISTER_TYPES_H
+#ifndef CHESS_AI_REGISTER_TYPES_H
+#define CHESS_AI_REGISTER_TYPES_H
 
-void initialize_neuralnet_module();
-void uninitialize_neuralnet_module();
+#include <godot_cpp/core/class_db.hpp>
 
-#endif // GDEXAMPLE_REGISTER_TYPES_H
+using namespace godot;
+
+void initialize_chess_ai_module(ModuleInitializationLevel p_level);
+void uninitialize_chess_ai_module(ModuleInitializationLevel p_level);
+
+#endif // CHESS_AI_REGISTER_TYPES_H
