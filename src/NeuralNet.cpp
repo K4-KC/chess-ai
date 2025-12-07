@@ -118,14 +118,9 @@ void NeuralNet::train(const Array &inputs, const Array &expected_outputs) {
         UtilityFunctions::print("Error: Output size mismatch");
         return;
     }
-
-    // --- Backpropagation with Squared Error Cost ---
-    // Cost Function: C = 1/2 * (Target - Output)^2
-    // Derivative dC/dOutput = -(Target - Output)
     
     std::vector<double> next_layer_deltas; 
 
-    // Output Layer
     for (size_t i = 0; i < output_values.size(); i++) {
         double output = output_values[i];
         double target = (double)expected_outputs[i];
@@ -136,7 +131,6 @@ void NeuralNet::train(const Array &inputs, const Array &expected_outputs) {
         next_layer_deltas.push_back(delta);
     }
 
-    // Hidden Layers
     for (int i = weights.size() - 1; i >= 0; i--) {
         int current_layer_idx = i;
         int next_layer_idx = i + 1;

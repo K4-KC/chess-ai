@@ -43,15 +43,13 @@ public:
 
     void compute();
 
-    // Training functions
     void set_learning_rate(double rate);
     double get_learning_rate() const;
     void train(const Array &inputs, const Array &expected_outputs);
     
-    // Returns the Mean Squared Error (MSE) cost
     double get_cost(const Array &inputs, const Array &expected_outputs); 
 };
 
-} // namespace godot
+}
 
 #endif
