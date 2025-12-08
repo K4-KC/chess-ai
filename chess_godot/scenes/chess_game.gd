@@ -40,7 +40,7 @@ func _ready():
 	pieces_node.name = "Pieces"
 	add_child(pieces_node)
 
-	board_rules = BoardRules.new()
+	board_rules = ClassDB.instantiate("BoardRules")
 	add_child(board_rules)
 	
 	setup_ui()
@@ -192,6 +192,7 @@ func start_promotion(piece_data):
 	for type in promotion_buttons:
 		promotion_buttons[type].icon = textures[color][type]
 	promotion_panel.visible = true
+	clear_temp_highlights()
 
 func _on_promotion_selected(type):
 	board_rules.commit_promotion(type)

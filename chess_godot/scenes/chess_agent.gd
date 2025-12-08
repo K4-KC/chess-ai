@@ -12,7 +12,7 @@ func _ready():
 	pieces_node.name = "Pieces"
 	add_child(pieces_node)
 
-	board_rules = BoardRules.new()
+	board_rules = ClassDB.instantiate("BoardRules")
 	add_child(board_rules)
 	
 	if ClassDB.class_exists("ChessAgent"):
