@@ -2,7 +2,7 @@
 extends "res://scenes/chess_game.gd"
 
 const AI_COLOR = 1
-var agent_module = null
+var chess_agent = null
 
 func _ready():
 	# Recreate visual containers (highlights and pieces) for this scene.
@@ -18,8 +18,8 @@ func _ready():
 	add_child(board_rules)
 	
 	if ClassDB.class_exists("ChessAgent"):
-		agent_module = ClassDB.instantiate("ChessAgent")
-		add_child(agent_module)
+		chess_agent = ClassDB.instantiate("ChessAgent")
+		add_child(chess_agent)
 		print("C++ ChessAgent initialized.")
 	else:
 		printerr("CRITICAL: ChessAgent class missing.")
@@ -60,7 +60,7 @@ func perform_ai_turn():
 					val = base + (data["color"] * 6)
 			simple_board.append(val)
 
-	var best_move = agent_module.select_best_move(simple_board, possible_moves)
+	var best_move = chess_agent.select_best_move(simple_board, possible_moves)
 
 	if best_move.has("start") and best_move.has("end"):
 		var start = best_move["start"]
