@@ -1,3 +1,4 @@
+# Main chess board scene: handles user input, piece sprites, highlights, and pawn promotion.
 extends Node2D
 
 const TILE_SIZE = 16
@@ -7,16 +8,17 @@ var board_rules: BoardRules
 var sprites = {} # Map<Vector2i, Sprite2D>
 var selected_pos = null # Vector2i
 
-# --- VISUALS & HIGHLIGHTS ---
-var highlight_sprites = [] # Temporary highlights (Selection, Moves, Captures)
-var last_move_sprites = [] # Persistent highlights (Last moved From/To)
+# Temporary visual helpers for current move and last move.
+var highlight_sprites = []
+var last_move_sprites = []
 
-# Preload Assets
+# Highlight textures used to show possible moves, captures, and last move.
 var tex_move = preload("res://assets/move.png")
 var tex_capture = preload("res://assets/capture.png")
 var tex_moving = preload("res://assets/moving.png")
 var tex_moved = preload("res://assets/moved.png")
 
+# Piece textures indexed by color (0/1) and type ("p","r","n","b","q","k").
 var textures = {
 	0: { "p": preload("res://assets/p0.png"), "r": preload("res://assets/r0.png"), "n": preload("res://assets/n0.png"), 
 		 "b": preload("res://assets/b0.png"), "q": preload("res://assets/q0.png"), "k": preload("res://assets/k0.png") },
@@ -24,7 +26,7 @@ var textures = {
 		 "b": preload("res://assets/b1.png"), "q": preload("res://assets/q1.png"), "k": preload("res://assets/k1.png") }
 }
 
-# --- UI ---
+# UI nodes and state tracking for pawn promotion flow.
 var promotion_panel = null
 var promotion_buttons = {} 
 var is_promoting = false
@@ -32,6 +34,7 @@ var pending_promotion_move_start = null # Store move details to highlight after 
 var pending_promotion_move_end = null
 
 func _ready():
+	# Two child containers: one for highlights, one for piece sprites.
 	var hl_node = Node2D.new()
 	hl_node.name = "Highlights"
 	add_child(hl_node)
@@ -40,6 +43,7 @@ func _ready():
 	pieces_node.name = "Pieces"
 	add_child(pieces_node)
 
+	# Create rules object and set up initial board.
 	board_rules = ClassDB.instantiate("BoardRules")
 	add_child(board_rules)
 	
@@ -47,6 +51,7 @@ func _ready():
 	board_rules.setup_board([]) 
 	refresh_visuals()
 
+# Build a simple promotion UI: 4 buttons centered over the board.
 func setup_ui():
 	var canvas = CanvasLayer.new()
 	add_child(canvas)
@@ -65,6 +70,7 @@ func setup_ui():
 		hbox.add_child(btn)
 		promotion_buttons[type] = btn
 
+# Handle mouse input for selecting pieces, making moves, and triggering promotion.
 func _input(event):
 	if is_promoting: return
 
@@ -83,19 +89,17 @@ func _input(event):
 					var move_end = clicked_pos
 					
 					var result = board_rules.attempt_move(selected_pos, clicked_pos)
-					if result == 1: # Standard Move
+					if result == 1:
 						update_last_move_visuals(move_start, move_end)
 						deselect_piece()
 						refresh_visuals()
-					elif result == 2: # Promotion
-						# Store these so we can highlight AFTER the user selects a piece
+					elif result == 2:
+						# Move leads to promotion: remember for later highlight and open UI.
 						pending_promotion_move_start = move_start
 						pending_promotion_move_end = move_end
 						
-						# Temporarily update visuals to show the pawn on the last rank (optional but good)
 						refresh_visuals()
-						
-						# Open UI
+
 						start_promotion(board_rules.get_data_at(clicked_pos.x, clicked_pos.y))
 				else:
 					var p = board_rules.get_data_at(clicked_pos.x, clicked_pos.y)
@@ -108,6 +112,7 @@ func _input(event):
 			if not p.is_empty() and p.color == board_rules.get_turn():
 				select_piece(clicked_pos)
 
+# Select a piece and spawn move/capture highlights for its legal moves.
 func select_piece(pos: Vector2i):
 	deselect_piece()
 	selected_pos = pos
@@ -115,14 +120,10 @@ func select_piece(pos: Vector2i):
 	spawn_highlight(tex_moving, pos)
 	
 	var valid_moves = board_rules.get_valid_moves_for_piece(pos)
-	var selected_piece_data = board_rules.get_data_at(pos.x, pos.y)
 	
 	for target in valid_moves:
 		var target_data = board_rules.get_data_at(target.x, target.y)
 		var is_capture = not target_data.is_empty()
-		
-		if selected_piece_data["type"] == "p" and target.x != pos.x and target_data.is_empty():
-			is_capture = true # En Passant
 			
 		if is_capture:
 			spawn_highlight(tex_capture, target)
@@ -145,6 +146,7 @@ func clear_temp_highlights():
 		s.queue_free()
 	highlight_sprites.clear()
 
+# Store and render the last move as two highlighted squares.
 func update_last_move_visuals(start: Vector2i, end: Vector2i):
 	for s in last_move_sprites:
 		s.queue_free()
@@ -162,6 +164,7 @@ func update_last_move_visuals(start: Vector2i, end: Vector2i):
 	$Highlights.add_child(s2)
 	last_move_sprites.append(s2)
 
+# Sync Sprite2D pieces with current board state from BoardRules.
 func refresh_visuals():
 	var active_positions = []
 	for x in range(8):
@@ -186,6 +189,7 @@ func refresh_visuals():
 					sprites[pos] = s
 				sprites[pos].position = grid_to_pixel(Vector2(x, y))
 
+# Show promotion panel and set icons based on the pawn's color.
 func start_promotion(piece_data):
 	is_promoting = true
 	var color = piece_data["color"]
@@ -194,20 +198,21 @@ func start_promotion(piece_data):
 	promotion_panel.visible = true
 	clear_temp_highlights()
 
+# Callback for when a promotion piece is chosen in the UI.
 func _on_promotion_selected(type):
 	board_rules.commit_promotion(type)
 	promotion_panel.visible = false
 	is_promoting = false
 	
-	# APPLY HIGHLIGHTS NOW
 	if pending_promotion_move_start != null and pending_promotion_move_end != null:
 		update_last_move_visuals(pending_promotion_move_start, pending_promotion_move_end)
 		pending_promotion_move_start = null
 		pending_promotion_move_end = null
 	
-	deselect_piece() # Ensure UI is clean
-	refresh_visuals() # Show the new Queen/Rook/etc
+	deselect_piece()
+	refresh_visuals()
 
+# Coordinate helpers between grid (0–7) and pixel space.
 func grid_to_pixel(grid_pos): return grid_pos * TILE_SIZE + BOARD_OFFSET
 func pixel_to_grid(pixel_pos): return Vector2i(floor(pixel_pos.x / TILE_SIZE), floor(pixel_pos.y / TILE_SIZE))
 func is_on_board(pos): return pos.x >= 0 and pos.x < 8 and pos.y >= 0 and pos.y < 8
