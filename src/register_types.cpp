@@ -1,7 +1,7 @@
 #include "register_types.h"
 
 // Custom Classes
-#include "board_rules.h"
+#include "board.h"
 #include "neural_net.h"
 #include "chess_agent.h"
 
@@ -16,7 +16,7 @@ void initialize_chess_ai_module(ModuleInitializationLevel p_level) {
         return;
     }
 
-    ClassDB::register_class<BoardRules>();
+    ClassDB::register_class<Board>();
     ClassDB::register_class<NeuralNet>();
     ClassDB::register_class<ChessAgent>();
 }

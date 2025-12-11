@@ -13,8 +13,8 @@
 using namespace godot;
 
 // BoardRules implements the chess rules and board state as a Godot Node2D.
-class BoardRules : public Node2D {
-	GDCLASS(BoardRules, Node2D)
+class Board : public Node2D {
+	GDCLASS(Board, Node2D)
 
 public:
 	// Internal representation of piece type and color.
@@ -55,8 +55,8 @@ protected:
 	static void _bind_methods();
 
 public:
-	BoardRules();
-	~BoardRules();
+	Board();
+	~Board();
 
 	// Initializes board with standard layout or a custom layout array.
 	void setup_board(const Array &custom_layout);

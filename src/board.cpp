@@ -1,4 +1,4 @@
-#include "board_rules.h"
+#include "board.h"
 #include <godot_cpp/core/class_db.hpp>
 #include <godot_cpp/variant/utility_functions.hpp>
 #include <cstring> // For memcpy
@@ -6,7 +6,7 @@
 using namespace godot;
 
 // Constructor: reset board, turn, and special flags.
-BoardRules::BoardRules() {
+Board::Board() {
 	turn = 0;
 	en_passant_target = Vector2i(-1, -1);
 	promotion_pending = false;
@@ -17,10 +17,10 @@ BoardRules::BoardRules() {
 	}
 }
 
-BoardRules::~BoardRules() {}
+Board::~Board() {}
 
 // Set up the board to either standard chess layout or a custom one.
-void BoardRules::setup_board(const Array &custom_layout) {
+void Board::setup_board(const Array &custom_layout) {
 	turn = 0;
 	en_passant_target = Vector2i(-1, -1);
 	promotion_pending = false;
@@ -63,7 +63,7 @@ void BoardRules::setup_board(const Array &custom_layout) {
 }
 
 // Export piece info at given coordinates in a Godot-friendly Dictionary.
-Dictionary BoardRules::get_data_at(int x, int y) const {
+Dictionary Board::get_data_at(int x, int y) const {
 	Dictionary d;
 	if (!is_on_board(Vector2i(x, y))) {
 		return d;
@@ -92,7 +92,7 @@ Dictionary BoardRules::get_data_at(int x, int y) const {
 
 // Helper to serialize the entire board state into an Array of Arrays of Dictionaries.
 // This matches the "full boards with 8x8 piece structs" requirement.
-static Array get_board_state_snapshot(const BoardRules::Piece b[8][8]) {
+static Array get_board_state_snapshot(const Board::Piece b[8][8]) {
 	Array rows;
 	for (int y = 0; y < 8; y++) {
 		Array row;
@@ -120,7 +120,7 @@ static Array get_board_state_snapshot(const BoardRules::Piece b[8][8]) {
 //    "promotion": String (optional, "q", "r", "b", "n"),
 //    "board": Array (8x8 grid of piece data representing the state AFTER the move)
 // }
-Array BoardRules::get_all_possible_moves(int color) {
+Array Board::get_all_possible_moves(int color) {
 	Array moves;
 	
 	// Backup state to restore after simulations
@@ -207,7 +207,7 @@ Array BoardRules::get_all_possible_moves(int color) {
 }
 
 // Get all legal target squares for the piece at start_pos.
-Array BoardRules::get_valid_moves_for_piece(Vector2i start_pos) {
+Array Board::get_valid_moves_for_piece(Vector2i start_pos) {
 	Array valid_targets;
 	if (!is_on_board(start_pos)) {
 		return valid_targets;
@@ -232,7 +232,7 @@ Array BoardRules::get_valid_moves_for_piece(Vector2i start_pos) {
 }
 
 // Main move entry point from script. Handles legality, self-check and promotion trigger.
-int BoardRules::attempt_move(Vector2i start, Vector2i end) {
+int Board::attempt_move(Vector2i start, Vector2i end) {
 	if (promotion_pending) {
 		return 0;
 	}
@@ -270,7 +270,7 @@ int BoardRules::attempt_move(Vector2i start, Vector2i end) {
 }
 
 // Commit a previously prepared pawn promotion (after UI selection).
-void BoardRules::commit_promotion(String type_str) {
+void Board::commit_promotion(String type_str) {
 	if (!promotion_pending) {
 		return;
 	}
@@ -285,12 +285,12 @@ void BoardRules::commit_promotion(String type_str) {
 }
 
 // Simple getter for current side to move.
-int BoardRules::get_turn() const {
+int Board::get_turn() const {
 	return turn;
 }
 
 // Execute the low-level board update for a move, including en passant and castling.
-void BoardRules::execute_move_internal(Vector2i start, Vector2i end, bool real_move) {
+void Board::execute_move_internal(Vector2i start, Vector2i end, bool real_move) {
 	Piece P = board[start.x][start.y];
 	int move_dir = (P.color == WHITE) ? -1 : 1;
 
@@ -325,7 +325,7 @@ void BoardRules::execute_move_internal(Vector2i start, Vector2i end, bool real_m
 }
 
 // Check basic piece movement rules and collisions, including special cases.
-bool BoardRules::is_valid_geometry(const Piece &P, Vector2i start, Vector2i end) const {
+bool Board::is_valid_geometry(const Piece &P, Vector2i start, Vector2i end) const {
 	int dx = end.x - start.x;
 	int dy = end.y - start.y;
 	int abs_dx = abs(dx);
@@ -414,7 +414,7 @@ bool BoardRules::is_valid_geometry(const Piece &P, Vector2i start, Vector2i end)
 }
 
 // Check that all squares between start and end (exclusive) are empty.
-bool BoardRules::is_path_clear(Vector2i start, Vector2i end) const {
+bool Board::is_path_clear(Vector2i start, Vector2i end) const {
 	int dx = (end.x - start.x) == 0 ? 0 : (end.x - start.x) > 0 ? 1 : -1;
 	int dy = (end.y - start.y) == 0 ? 0 : (end.y - start.y) > 0 ? 1 : -1;
 	
@@ -429,7 +429,7 @@ bool BoardRules::is_path_clear(Vector2i start, Vector2i end) const {
 }
 
 // Determine if a square is attacked by any piece of the given color.
-bool BoardRules::is_square_attacked(Vector2i square, int by_color) const {
+bool Board::is_square_attacked(Vector2i square, int by_color) const {
 	for (int x = 0; x < 8; x++) {
 		for (int y = 0; y < 8; y++) {
 			Piece P = board[x][y];
@@ -456,7 +456,7 @@ bool BoardRules::is_square_attacked(Vector2i square, int by_color) const {
 }
 
 // Test if making this move would leave own king in check.
-bool BoardRules::does_move_cause_self_check(Vector2i start, Vector2i end) {
+bool Board::does_move_cause_self_check(Vector2i start, Vector2i end) {
 	Piece orig_start = board[start.x][start.y];
 	Piece orig_end = board[end.x][end.y];
 
@@ -476,7 +476,7 @@ bool BoardRules::does_move_cause_self_check(Vector2i start, Vector2i end) {
 }
 
 // Check if the given color's king is currently in check.
-bool BoardRules::is_in_check(int color) const {
+bool Board::is_in_check(int color) const {
 	Vector2i king_pos(-1, -1);
 	for (int x = 0; x < 8; x++) {
 		for (int y = 0; y < 8; y++) {
@@ -493,19 +493,19 @@ bool BoardRules::is_in_check(int color) const {
 }
 
 // Simple bounds check for 8x8 board.
-bool BoardRules::is_on_board(Vector2i pos) const {
+bool Board::is_on_board(Vector2i pos) const {
 	return pos.x >= 0 && pos.x < 8 && pos.y >= 0 && pos.y < 8;
 }
 
 // Godot method binding for scripting API.
-void BoardRules::_bind_methods() {
-	ClassDB::bind_method(D_METHOD("setup_board", "custom_layout"), &BoardRules::setup_board);
-	ClassDB::bind_method(D_METHOD("get_data_at", "x", "y"), &BoardRules::get_data_at);
-	ClassDB::bind_method(D_METHOD("attempt_move", "start", "end"), &BoardRules::attempt_move);
-	ClassDB::bind_method(D_METHOD("commit_promotion", "type_str"), &BoardRules::commit_promotion);
-	ClassDB::bind_method(D_METHOD("get_turn"), &BoardRules::get_turn);
+void Board::_bind_methods() {
+	ClassDB::bind_method(D_METHOD("setup_board", "custom_layout"), &Board::setup_board);
+	ClassDB::bind_method(D_METHOD("get_data_at", "x", "y"), &Board::get_data_at);
+	ClassDB::bind_method(D_METHOD("attempt_move", "start", "end"), &Board::attempt_move);
+	ClassDB::bind_method(D_METHOD("commit_promotion", "type_str"), &Board::commit_promotion);
+	ClassDB::bind_method(D_METHOD("get_turn"), &Board::get_turn);
 	
 	// Expose move generation helpers to GDScript/AI.
-	ClassDB::bind_method(D_METHOD("get_all_possible_moves", "color"), &BoardRules::get_all_possible_moves);
-	ClassDB::bind_method(D_METHOD("get_valid_moves_for_piece", "start_pos"), &BoardRules::get_valid_moves_for_piece);
+	ClassDB::bind_method(D_METHOD("get_all_possible_moves", "color"), &Board::get_all_possible_moves);
+	ClassDB::bind_method(D_METHOD("get_valid_moves_for_piece", "start_pos"), &Board::get_valid_moves_for_piece);
 }
