@@ -12,3 +12,6 @@
 src/*.obj
 
 /venv
+*.dll
+*.lib
+*.exp

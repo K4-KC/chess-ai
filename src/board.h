@@ -12,74 +12,74 @@
 
 using namespace godot;
 
-// BoardRules implements the chess rules and board state as a Godot Node2D.
+// Constants for Bitwise operations
+const uint8_t TYPE_MASK = 0x07;
+const uint8_t COLOR_MASK = 0x18;
+const uint8_t STATE_MASK = 0x20; // Used for "Has Moved" or "En Passant Vulnerable"
+
+enum PieceType {
+    EMPTY = 0,
+    PAWN = 1,
+    KNIGHT = 2,
+    BISHOP = 3,
+    ROOK = 4,
+    QUEEN = 5,
+    KING = 6
+};
+
+enum PieceColor {
+    COLOR_NONE = 0,
+    COLOR_WHITE = 8,
+    COLOR_BLACK = 16
+};
+
 class Board : public Node2D {
-	GDCLASS(Board, Node2D)
-
-public:
-	// Internal representation of piece type and color.
-	enum PieceType { EMPTY = -1, PAWN = 0, ROOK = 1, KNIGHT = 2, BISHOP = 3, QUEEN = 4, KING = 5 };
-	enum PieceColor { WHITE = 0, BLACK = 1, NONE = -1 };
-
-	struct Piece {
-		PieceType type;
-		PieceColor color;
-		bool has_moved; // Tracks if piece has moved (for castling, pawn double step).
-		bool active;    // false = empty square.
-	};
+    GDCLASS(Board, Node2D)
 
 private:
-	// Board is indexed as board[x][y] with x,y in [0,7].
-	Piece board[8][8];
+    // 1D Array of 64 bytes. 
+    // Index 0 = a8 (Top Left), Index 63 = h1 (Bottom Right)
+    uint8_t squares[64];
 
-	int turn; // 0 = White, 1 = Black
+    uint8_t turn; // 0 for White, 1 for Black
+    
+    // State to handle pending promotions
+    bool promotion_pending;
+    uint8_t promotion_square; // Where the pawn is waiting
 
-	// En passant target square; (-1, -1) if none is available.
-	Vector2i en_passant_target;
+    // Helpers
+    uint8_t get_type(uint8_t val) const;
+    uint8_t get_color_code(uint8_t val) const; // Returns 1 (White) or 2 (Black)
+    bool is_enemy(uint8_t me_sq, uint8_t target_sq) const;
+    void clear_en_passant_flags(uint8_t color_to_clear);
 
-	// Promotion state: used when a pawn reaches last rank.
-	bool promotion_pending;
-	Vector2i promotion_square;
-
-	// Internal Logic helpers
-	bool is_on_board(Vector2i pos) const;
-	bool is_valid_geometry(const Piece &P, Vector2i start, Vector2i end) const;
-	bool is_path_clear(Vector2i start, Vector2i end) const;
-	bool is_square_attacked(Vector2i square, int by_color) const;
-	bool does_move_cause_self_check(Vector2i start, Vector2i end);
-	bool is_in_check(int color) const;
-	bool is_checkmate(int color); // Declared for future use; not exposed to script.
-	void execute_move_internal(Vector2i start, Vector2i end, bool real_move);
+    // Internal Logic functions
+    bool is_square_attacked(uint8_t square, uint8_t by_color); 
+    bool is_king_in_check(uint8_t color); 
+    
+    // Generates moves regardless of checks
+    Array get_pseudo_legal_moves_for_piece(uint8_t start_pos);
 
 protected:
-	static void _bind_methods();
+    static void _bind_methods();
 
 public:
-	Board();
-	~Board();
+    Board();
+    ~Board();
 
-	// Initializes board with standard layout or a custom layout array.
-	void setup_board(const Array &custom_layout);
+    uint8_t get_turn(); // Returns 0 for White and 1 for Black
+    uint8_t get_piece_on_square(uint8_t pos);
 
-	// Returns a Dictionary describing piece at (x,y), or empty if no active piece.
-	Dictionary get_data_at(int x, int y) const;
+    void setup_board(const String &custom_layout); 
 
-	// Core Gameplay
-
-	// Attempts a move; return: 0 = fail, 1 = success, 2 = success with promotion pending.
-	int attempt_move(Vector2i start, Vector2i end);
-
-	// Finalize promotion at promotion_square, based on type_str ("q","r","b","n").
-	void commit_promotion(String type_str);
-
-	// Current side to move: 0 = white, 1 = black.
-	int get_turn() const;
-
-	// Returns all legal moves for given color as an Array of Dictionaries.
-	Array get_all_possible_moves(int color);
-
-	// Returns all legal target squares for a piece at start_pos.
-	Array get_valid_moves_for_piece(Vector2i start_pos);
+    // 0 = fail, 1 = success, 2 = success with promotion pending.
+    uint8_t attempt_move(uint8_t start, uint8_t end); 
+    
+    // Finalize promotion with type_str ('q','r','b','n'). 0 = fail, 1 = success.
+    uint8_t commit_promotion(String type_str); 
+    
+    Array get_all_possible_moves(uint8_t color);
+    Array get_legal_moves_for_piece(uint8_t square);
 };
 
 #endif
