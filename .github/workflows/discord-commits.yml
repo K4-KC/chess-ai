@@ -33,7 +33,7 @@ jobs:
         with:
           webhook: ${{ secrets.DISCORD_WEBHOOK }}
           message: |
-            📢 **ROOK B1 ROOK B1** what the hell is that move i have no idea: **_${{ github.ref_name }}_**
+            📢 **New commit** pushed to the branch: **_${{ github.ref_name }}_**
           embed: |
             {
               "author": {
@@ -41,8 +41,16 @@ jobs:
                 "icon_url": "https://github.com/{{ commit.author.username }}.png",
                 "url": "https://github.com/{{ commit.author.username }}"
               },
-              "title":       "https://youtu.be/YULHD-UuqCE",
-              "url":         "https://youtu.be/YULHD-UuqCE"
+              "title":       "{{ commit.title }}",
+              "description": "{{ commit.description }}",
+              "url":         "{{ commit.url }}",
+              "fields": [
+                {
+                  "name":  "Files Changed",
+                  "value": ${{ steps.filelist.outputs.result }},
+                  "inline": false
+                }
+              ]
             }
 
   # ──────────────────── Branch Create ────────────────────
