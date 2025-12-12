@@ -11,5 +11,17 @@ config_version=5
 [application]
 
 config/name="keyChanChess_"
+run/main_scene="uid://bxebxg8uuppol"
 config/features=PackedStringArray("4.5", "Forward Plus")
 config/icon="res://icon.svg"
+
+[display]
+
+window/size/viewport_width=512
+window/size/viewport_height=512
+window/size/resizable=false
+window/stretch/scale=4.0
+
+[rendering]
+
+textures/canvas_textures/default_texture_filter=0

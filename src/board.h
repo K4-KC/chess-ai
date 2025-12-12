@@ -48,6 +48,7 @@ struct Move {
     bool is_castling;
     bool is_en_passant;
     uint8_t en_passant_target_before;
+    uint8_t halfmove_clock_before;
     bool castling_rights_before[4]; // WK, WQ, BK, BQ
 };
 
@@ -57,11 +58,14 @@ class Board : public Node2D {
 private:
     // Board state: 64 squares, each uint8_t encoding piece and color
     uint8_t squares[64];
+    // NOTE: for piece offset and sliding calculations, use a single number to denote directions and positions instead of a rank and file
+    // Board indexing: 0=a1, 1=b1, ..., 7=h1, 8=a2, ..., 56=a8, 63=h8
+    // rank = pos / 8, file = pos % 8
     
     // Game state
     uint8_t turn; // 0 = White, 1 = Black
     std::vector<Move> move_history;
-    std::vector<String> move_history_notation; // FEN notation for each move
+    std::vector<String> move_history_notation; // UCI notation for each move
     
     // Castling rights: [0]=WK, [1]=WQ, [2]=BK, [3]=BQ
     bool castling_rights[4];
@@ -85,13 +89,7 @@ private:
     void initialize_starting_position();
     bool parse_fen(const String &fen);
     String generate_fen() const;
-    
-    // Coordinate conversion
-    inline int get_rank(uint8_t pos) const { return pos / 8; }
-    inline int get_file(uint8_t pos) const { return pos % 8; }
-    inline uint8_t make_pos(int rank, int file) const { return rank * 8 + file; }
-    inline bool is_valid_pos(int rank, int file) const { return rank >= 0 && rank < 8 && file >= 0 && file < 8; }
-    
+
     // Move validation helpers
     bool is_square_attacked(uint8_t pos, uint8_t attacking_color) const;
     bool is_king_in_check(uint8_t color) const;
@@ -135,18 +133,18 @@ public:
     uint8_t get_piece_on_square(uint8_t pos) const;
     void set_piece_on_square(uint8_t pos, uint8_t piece); // For testing/setup
     
-    void setup_board(const String &fen_notation); // Use FEN notation
+    void setup_board(const String &fen_notation); // Use FEN notation (empty = starting position)
     String get_fen() const; // Get current position as FEN
     
     uint8_t attempt_move(uint8_t start, uint8_t end); // 0=fail, 1=success, 2=promotion pending
     void commit_promotion(const String &type_str); // 'q','r','b','n'
     
     void revert_move(); // Undo last move
-    Array get_moves() const; // Returns array of move strings in algebraic notation
+    Array get_moves() const; // Returns array of move strings in UCI notation
     
     // AI/Analysis functions
-    Array get_all_possible_moves(uint8_t color);
-    Array get_legal_moves_for_piece(uint8_t square);
+    Array get_all_possible_moves(uint8_t color); // Returns array of {from, to} dictionaries
+    Array get_legal_moves_for_piece(uint8_t square); // Returns array of target squares
     void make_move(uint8_t start, uint8_t end); // Direct move without validation (for AI)
     
     // Game state queries
