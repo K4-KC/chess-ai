@@ -50,6 +50,9 @@ var is_promoting = false
 var pending_promotion_move_start = null # Store move details to highlight after promotion
 var pending_promotion_move_end = null
 
+# FEN history to track positions for each move
+var fen_history = []
+
 func _ready():
 	# Two child containers: one for highlights, one for piece sprites.
 	var hl_node = Node2D.new()
@@ -66,6 +69,7 @@ func _ready():
 	
 	setup_ui()
 	board.setup_board("") # Empty string = starting position
+	fen_history.append(board.get_fen()) # Store initial position
 	refresh_visuals()
 
 # Build a simple promotion UI: 4 buttons centered over the board.
@@ -97,6 +101,7 @@ func grid_to_square(grid_pos: Vector2i) -> int:
 # Convert square index (0-63) to grid position (x, y)
 func square_to_grid(square: int) -> Vector2i:
 	var file = square % 8
+	@warning_ignore("integer_division") # Ignore warning for integer division
 	var rank = square / 8
 	return Vector2i(file, 7 - rank)  # Flip y
 
@@ -140,6 +145,11 @@ func get_valid_moves_for_piece(grid_pos: Vector2i) -> Array:
 # Handle mouse input for selecting pieces, making moves, and triggering promotion.
 func _input(event):
 	if is_promoting: return
+	
+	# Left arrow key to revert last move
+	if event is InputEventKey and event.pressed and event.keycode == KEY_LEFT:
+		revert_last_move()
+		return
 
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		var clicked_pos = pixel_to_grid(event.position)
@@ -163,6 +173,7 @@ func _input(event):
 						update_last_move_visuals(move_start, move_end)
 						deselect_piece()
 						refresh_visuals()
+						record_and_print_fen()
 						check_game_over()
 					elif result == 2:
 						# Move leads to promotion: remember for later highlight and open UI.
@@ -171,7 +182,7 @@ func _input(event):
 						
 						refresh_visuals()
 						
-						var piece_data = get_data_at(selected_pos)
+						var piece_data = get_data_at(clicked_pos)
 						start_promotion(piece_data)
 				else:
 					var p = get_data_at(clicked_pos)
@@ -291,7 +302,74 @@ func _on_promotion_selected(type):
 	
 	deselect_piece()
 	refresh_visuals()
+	record_and_print_fen()
 	check_game_over()
+
+# Revert the last move (called on left arrow key)
+func revert_last_move():
+	var moves = board.get_moves()
+	if moves.size() == 0:
+		return  # No moves to revert
+	
+	board.revert_move()
+	deselect_piece()
+	
+	# Remove last FEN from history
+	if fen_history.size() > 1:
+		fen_history.pop_back()
+	
+	# Clear last move highlights
+	for s in last_move_sprites:
+		s.queue_free()
+	last_move_sprites.clear()
+	
+	# Show previous move's highlight if there was one
+	var remaining_moves = board.get_moves()
+	if remaining_moves.size() > 0:
+		var last_uci = remaining_moves[remaining_moves.size() - 1]
+		var prev_move = parse_uci_move(last_uci)
+		if prev_move.size() == 2:
+			update_last_move_visuals(prev_move[0], prev_move[1])
+	
+	refresh_visuals()
+	
+	# Clear terminal and print all FENs from history
+	print_fen_history()
+
+# Parse UCI move notation (e.g., "e2e4") into [start_grid, end_grid]
+func parse_uci_move(uci: String) -> Array:
+	if uci.length() < 4:
+		return []
+	
+	var from_file = uci.unicode_at(0) - "a".unicode_at(0)
+	var from_rank = uci.unicode_at(1) - "1".unicode_at(0)
+	var to_file = uci.unicode_at(2) - "a".unicode_at(0)
+	var to_rank = uci.unicode_at(3) - "1".unicode_at(0)
+	
+	# Convert to grid coordinates (flip rank)
+	var start_grid = Vector2i(from_file, 7 - from_rank)
+	var end_grid = Vector2i(to_file, 7 - to_rank)
+	
+	return [start_grid, end_grid]
+
+# Record current FEN and print it
+func record_and_print_fen():
+	var fen = board.get_fen()
+	fen_history.append(fen)
+	print("Move %d: %s" % [fen_history.size() - 1, fen])
+
+# Print all FENs from history (used when reverting)
+func print_fen_history():
+	# Print separator to simulate clear
+	print("\n" + "=".repeat(60))
+	print("=== MOVE HISTORY ===")
+	print("=".repeat(60))
+	
+	for i in range(fen_history.size()):
+		if i == 0:
+			print("Start:  %s" % fen_history[i])
+		else:
+			print("Move %d: %s" % [i, fen_history[i]])
 
 # Check if game has ended and print result
 func check_game_over():
